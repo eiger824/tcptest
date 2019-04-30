@@ -7,6 +7,7 @@
 #include <libgen.h>
 #include <stdarg.h>
 #include <signal.h>
+#include <getopt.h>
 
 #define MAX 80
 #define SA struct sockaddr
