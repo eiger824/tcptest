@@ -60,7 +60,7 @@ int main_loop()
         write(g_sockfd, buff, sizeof(buff));
         bzero(buff, sizeof(buff));
         read(g_sockfd, buff, sizeof(buff));
-        printf("s>>c: [%s]\n", buff);
+        printf("\t[%s] s>>c\n", buff);
     }
     return 0;
 }

@@ -10,6 +10,7 @@
 #include <libgen.h>
 #include <getopt.h>
 #include <stdarg.h>
+#include <ctype.h>
 
 #define MAX 80
 #define SA struct sockaddr
@@ -40,6 +41,7 @@ void info(const char* msg, ...)
 void func(int sockfd)
 {
     char buff[MAX];
+    int i;
     // infinite loop for chat
     while (1)
     {
@@ -53,6 +55,12 @@ void func(int sockfd)
 
         // print buffer which contains the client contents
         info("From client: [%s], echoing msg back.\n", buff);
+
+	// Convert the message to uppercase
+	for (i = 0; i < strlen(buff); ++i)
+	{
+		buff[i] = toupper(buff[i]);
+	}
 
         // and send that buffer to client
         write(sockfd, buff, sizeof(buff));
