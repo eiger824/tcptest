@@ -22,8 +22,9 @@ void usage(char* program)
     printf(
             "USAGE: %s [ARGS] <port>\n"
             "ARGS:\n"
-            " -d        Print some debug info\n"
-            " -h        Print this help and exit\n"
+            " -d         Print some debug info\n"
+            " -h         Print this help and exit\n"
+            " -p <proto> L4 protocol to be used: tcp,udp (defaults to tcp)\n"
             , basename(program)
           );
 }
@@ -73,9 +74,13 @@ int main(int argc, char* argv[])
     int sockfd, connfd, len;
     struct sockaddr_in servaddr, cli;
     int c, portno;
+    int socket_type;
+    char proto[16];
 
+    strcpy(proto, "tcp");
+    socket_type = SOCK_STREAM;
     // Parse options
-    while ((c = getopt(argc, argv, "dhl:")) != EOF)
+    while ((c = getopt(argc, argv, "dhl:p:")) != EOF)
     {
         switch (c)
         {
@@ -85,11 +90,24 @@ int main(int argc, char* argv[])
             case 'h':
                 usage(argv[0]);
                 exit (0);
+            case 'p':
+                // check proto
+                if (strcmp(optarg, "tcp") != 0 && strcmp(optarg, "udp"))
+                {
+                    fprintf(stderr, "Unknown protocol \"%s\"\n", optarg);
+                    usage(argv[0]);
+                    exit (1);
+                }
+                strcpy(proto, optarg);
+                if (!strcmp(proto, "tcp")) socket_type = SOCK_STREAM;
+                else socket_type = SOCK_DGRAM;
+                break;
             default:
                 usage(argv[0]);
                 exit (1);
         }
     }
+    info("Chosen L4-protocol: %s\n", proto);
     // parse the positional arguments
     if (argc - optind != 1)
     {
@@ -99,7 +117,7 @@ int main(int argc, char* argv[])
     portno = atoi(argv[optind]);
 
     // socket create and verification
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    if ((sockfd = socket(AF_INET, socket_type, 0)) == -1)
     {
         perror("socket");
         exit (1);
@@ -121,23 +139,27 @@ int main(int argc, char* argv[])
     }
     info("Socket successfully binded.\n");
 
-    // Now server is ready to listen and verification
-    if ((listen(sockfd, 5)) != 0)
+    // Only TCP listens
+    if (socket_type == SOCK_STREAM)
     {
-        perror("listen");
-        exit (1);
-    }
-    info("Server listening to 0.0.0.0/0 on port %d ...\n", portno);
+        // Now server is ready to listen and verification
+        if ((listen(sockfd, 5)) != 0)
+        {
+            perror("listen");
+            exit (1);
+        }
+        info("Server listening to 0.0.0.0/0 on port %d ...\n", portno);
 
-    len = sizeof(cli);
-    // Accept the data packet from client and verification
-    connfd = accept(sockfd, (SA*)&cli, &len);
-    if (connfd < 0)
-    {
-        perror("accept");
-        exit (1);
+        len = sizeof(cli);
+        // Accept the data packet from client and verification
+        connfd = accept(sockfd, (SA*)&cli, &len);
+        if (connfd < 0)
+        {
+            perror("accept");
+            exit (1);
+        }
+        info("Server accepting incoming client.\n");
     }
-    info("Server accepting incoming client.\n");
 
     // Function for chatting between client and server
     func(connfd);

@@ -20,8 +20,9 @@ void usage(char* program)
     printf(
             "USAGE: %s [ARGS] <hostname> <port>\n"
             "ARGS:\n"
-            " -d        Print some debug info\n"
-            " -h        Print this help and exit\n"
+            " -d         Print some debug info\n"
+            " -h         Print this help and exit\n"
+            " -p <proto> L4 protocol to be used: tcp,udp (defaults to tcp)\n"
             , basename(program)
           );
 }
@@ -69,10 +70,14 @@ int main(int argc, char* argv[])
 {
     struct sockaddr_in servaddr, cli;
     int c, portno;
+    int socket_type;
     char hostname[1024];
+    char proto[16];
 
+    strcpy(proto, "tcp");
+    socket_type = SOCK_STREAM;
     // parse options
-    while (( c = getopt(argc, argv, "dh")) != EOF)
+    while (( c = getopt(argc, argv, "dhp:")) != EOF)
     {
         switch (c)
         {
@@ -82,6 +87,18 @@ int main(int argc, char* argv[])
             case 'h':
                 usage(argv[0]);
                 exit (0);
+            case 'p':
+                // check proto
+                if (strcmp(optarg, "tcp") != 0 && strcmp(optarg, "udp"))
+                {
+                    fprintf(stderr, "Unknown protocol \"%s\"\n", optarg);
+                    usage(argv[0]);
+                    exit (1);
+                }
+                strcpy(proto, optarg);
+                if (!strcmp(proto, "tcp")) socket_type = SOCK_STREAM;
+                else socket_type = SOCK_DGRAM;
+                break;
             default:
                 usage(argv[0]);
                 exit (1);
@@ -99,7 +116,7 @@ int main(int argc, char* argv[])
     info("Attempting TCP connection to %s on port %d\n", hostname, portno);
 
     // socket create and varification
-    if ((g_sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    if ((g_sockfd = socket(AF_INET, socket_type, 0)) == -1)
     {
         perror("socket");
         exit (1);
@@ -112,13 +129,17 @@ int main(int argc, char* argv[])
     servaddr.sin_addr.s_addr = inet_addr(hostname);
     servaddr.sin_port = htons(portno);
 
-    // connect the client socket to server socket
-    if (connect(g_sockfd, (SA*)&servaddr, sizeof(servaddr)) != 0)
+    // Only TCP connects
+    if (socket_type == SOCK_STREAM)
     {
-        perror("connect");
-        exit (1);
+        // connect the client socket to server socket
+        if (connect(g_sockfd, (SA*)&servaddr, sizeof(servaddr)) != 0)
+        {
+            perror("connect");
+            exit (1);
+        }
+        info("Connected to the remote server.\n");
     }
-    info("Connected to the remote server.\n");
 
     // function for chat
     return main_loop();

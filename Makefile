@@ -1,9 +1,9 @@
 all: cli srv
 
-cli: tcpcli.c
+cli: l4cli.c
 	gcc -o $@ $< -Wall -Wextra -std=c11
 
-srv: tcpsrv.c
+srv: l4srv.c
 	gcc -o $@ $< -Wall -Wextra -std=c11
 
 clean:
